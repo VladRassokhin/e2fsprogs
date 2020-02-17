@@ -715,9 +715,9 @@ static int insert_extent(struct fiemap_extent_list **ext_list_head,
     }
 
     /* Insert "ext" after "ext_list_head" */
-    insert(ext_list_head, ext);
+    insert(*ext_list_head, ext);
     return 0;
-out:
+    out:
     errno = EINVAL;
     return -1;
 }
@@ -767,6 +767,12 @@ static int sort_extents_by_physical(struct fiemap_extent_list **ext_list_head) {
     if (array == NULL)
         goto out;
 
+    struct fiemap_extent_list *a_tmp = *ext_list_head;
+    for (int i = 0; i < size; ++i) {
+        array[i] = a_tmp;
+        a_tmp = a_tmp->next;
+    }
+
     /* Sort an array */
     qsort(array, size, sizeof(struct fiemap_extent_list *), comp_physical);
 
@@ -774,7 +780,7 @@ static int sort_extents_by_physical(struct fiemap_extent_list **ext_list_head) {
     for (int i = 0; i < size; ++i) {
         if (i != 0)
             (array[i])->prev = (array[i - 1]);
-        if (i != size -1)
+        if (i != size - 1)
             (array[i])->next = (array[i + 1]);
     }
     (array[0])->prev = array[size - 1];
