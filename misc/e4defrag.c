@@ -696,6 +696,100 @@ out:
 }
 
 /*
+ * insert_extent() -	Sequentially insert extent.
+ *
+ * @ext_list_head:	the head of physical extent list.
+ * @ext:		the extent element which will be inserted.
+ */
+static int insert_extent(struct fiemap_extent_list **ext_list_head,
+                         struct fiemap_extent_list *ext) {
+    if (ext == NULL)
+        goto out;
+
+    /* First element */
+    if (*ext_list_head == NULL) {
+        (*ext_list_head) = ext;
+        (*ext_list_head)->prev = *ext_list_head;
+        (*ext_list_head)->next = *ext_list_head;
+        return 0;
+    }
+
+    /* Insert "ext" after "ext_list_head" */
+    insert(ext_list_head, ext);
+    return 0;
+out:
+    errno = EINVAL;
+    return -1;
+}
+
+static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
+    const struct fiemap_extent_list *ex_a =
+            (const struct fiemap_extent_list *) a;
+    const struct fiemap_extent_list *ex_b =
+            (const struct fiemap_extent_list *) b;
+
+    if (ex_a->data.physical < ex_b->data.physical)
+        return -1;
+    else if (ex_a->data.physical > ex_b->data.physical)
+        return 1;
+    else {
+        errno = EINVAL;
+        return 0;
+    }
+}
+
+static int get_logical_count(struct fiemap_extent_list *logical_list_head);
+
+/*
+ * sort_extents_by_physical() -	Sort extents by physical.
+ *
+ * @ext_list_head:	the head of physical extent list.
+ */
+static int sort_extents_by_physical(struct fiemap_extent_list **ext_list_head) {
+    int size;
+    struct fiemap_extent_list **array = NULL;
+
+    if (ext_list_head == NULL)
+        goto out;
+
+    /* Empty list */
+    if (*ext_list_head == NULL)
+        return 0;
+
+    size = get_logical_count(*ext_list_head);
+
+    /* Single element list */
+    if (size == 1)
+        return 0;
+
+    /* Convert to array */
+    array = malloc(size * sizeof(struct fiemap_extent_list *));
+    if (array == NULL)
+        goto out;
+
+    /* Sort an array */
+    qsort(array, size, sizeof(struct fiemap_extent_list *), comp_physical);
+
+    /* Restore pointers in linked list */
+    for (int i = 0; i < size; ++i) {
+        if (i != 0)
+            (array[i])->prev = (array[i - 1]);
+        if (i != size -1)
+            (array[i])->next = (array[i + 1]);
+    }
+    (array[0])->prev = array[size - 1];
+    (array[size - 1])->next = array[0];
+
+    *ext_list_head = array[0];
+
+    FREE(array);
+    return 0;
+out:
+    errno = EINVAL;
+    return -1;
+}
+
+/*
  * insert_exts_group() -	Insert a exts_group.
  *
  * @ext_group_head:		the head of a exts_group list.
@@ -835,8 +929,7 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 			ext_list->data.len = ext_buf[i].fe_length
 						/ block_size;
 
-			ret = insert_extent_by_physical(
-					ext_list_head, ext_list);
+            ret = insert_extent(ext_list_head, ext_list);
 			if (ret < 0) {
 				FREE(ext_list);
 				goto out;
@@ -855,6 +948,7 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 					& FIEMAP_EXTENT_LAST));
 
 	FREE(fiemap_buf);
+    sort_extents_by_physical(ext_list_head);
 	return 0;
 out:
 	FREE(fiemap_buf);
@@ -868,6 +962,8 @@ out:
  */
 static int get_logical_count(struct fiemap_extent_list *logical_list_head)
 {
+    if (logical_list_head == NULL)
+        return 0;
 	int ret = 0;
 	struct fiemap_extent_list *ext_list_tmp  = logical_list_head;
 
@@ -1123,6 +1219,7 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 		return 0;
 	}
 
+    printf("Fetching extents...");
 	/* Get file's physical extents  */
 	ret = get_file_extents(fd, &physical_list_head);
 	if (ret < 0) {
@@ -1132,11 +1229,13 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 		}
 		goto out;
 	}
+    printf(" Done.\n");
 
 	/* Get the count of file's continuous physical region */
 	physical_ext_count = get_physical_count(physical_list_head);
 
 	/* Change list from physical to logical */
+    printf("Converting to logical...");
 	ret = change_physical_to_logical(&physical_list_head,
 							&logical_list_head);
 	if (ret < 0) {
@@ -1146,6 +1245,7 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 		}
 		goto out;
 	}
+    printf(" Done.\n");
 
 	/* Count file fragments before defrag */
 	now_ext_count = get_logical_count(logical_list_head);
