@@ -776,8 +776,8 @@ static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
     const struct fiemap_extent_list **ex_b =
             (const struct fiemap_extent_list **) b;
 
-    int result = (int) ((*ex_a)->data.physical - (*ex_a)->data.physical);
-    printf("Comp %8x %8x  vals: %8x %8x res %x\n", (*ex_a), (*ex_a), (*ex_a)->data.physical, (*ex_a)->data.physical, result);
+    int result = (int) ((*ex_a)->data.physical - (*ex_b)->data.physical);
+    printf("Comp %8x %8x  vals: %8x %8x res %x\n", (*ex_a), (*ex_a), (*ex_a)->data.physical, (*ex_b)->data.physical, result);
     return result;
 }
 
