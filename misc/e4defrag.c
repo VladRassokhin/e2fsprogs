@@ -741,50 +741,43 @@ static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
 static int get_logical_count(struct fiemap_extent_list *logical_list_head);
 
 /*
- * sort_extents_by_physical() -	Sort extents by physical.
+ * sort_extents() -	Sort extents using provided comparator.
  *
  * @ext_list_head:	the head of physical extent list.
  */
-static int sort_extents_by_physical(struct fiemap_extent_list **ext_list_head) {
+static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* comparator)(const void *, const void *)) {
     int size;
     struct fiemap_extent_list **array = NULL;
+    struct fiemap_extent_list *ext_list_tmp;
 
     if (ext_list_head == NULL)
         goto out;
 
-    /* Empty list */
-    if (*ext_list_head == NULL)
-        return 0;
-
     size = get_logical_count(*ext_list_head);
 
-    /* Single element list */
-    if (size == 1)
+    /* Empty or single element list */
+    if (size <= 1)
         return 0;
 
-    /* Convert to array */
+    /* Convert to an array */
     array = malloc(size * sizeof(struct fiemap_extent_list *));
     if (array == NULL)
         goto out;
 
-    struct fiemap_extent_list *a_tmp = *ext_list_head;
+    ext_list_tmp = *ext_list_head;
     for (int i = 0; i < size; ++i) {
-        array[i] = a_tmp;
-        a_tmp = a_tmp->next;
+        array[i] = ext_list_tmp;
+        ext_list_tmp = ext_list_tmp->next;
     }
 
     /* Sort an array */
-    qsort(array, size, sizeof(struct fiemap_extent_list *), comp_physical);
+    qsort(array, size, sizeof(struct fiemap_extent_list *), comparator);
 
     /* Restore pointers in linked list */
     for (int i = 0; i < size; ++i) {
-        if (i != 0)
-            (array[i])->prev = (array[i - 1]);
-        if (i != size - 1)
-            (array[i])->next = (array[i + 1]);
+        array[i]->prev = array[(size + i - 1) % size];
+        array[i]->next = array[(i + 1) % size];
     }
-    (array[0])->prev = array[size - 1];
-    (array[size - 1])->next = array[0];
 
     *ext_list_head = array[0];
 
@@ -905,6 +898,8 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 	/* Alloc space for fiemap */
 	ext_buf_size = EXTENT_MAX_COUNT * sizeof(struct fiemap_extent);
 	fie_buf_size = sizeof(struct fiemap) + ext_buf_size;
+	printf("sizeof(struct fiemap_extent) is %d bytes", sizeof(struct fiemap_extent));
+	printf("fie_buf_size is %d bytes", fie_buf_size);
 
 	fiemap_buf = malloc(fie_buf_size);
 	if (fiemap_buf == NULL)
@@ -954,7 +949,7 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 					& FIEMAP_EXTENT_LAST));
 
 	FREE(fiemap_buf);
-    sort_extents_by_physical(ext_list_head);
+    sort_extents(ext_list_head, comp_physical);
 	return 0;
 out:
 	FREE(fiemap_buf);
@@ -1257,6 +1252,7 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 	now_ext_count = get_logical_count(logical_list_head);
 
 	if (current_uid == ROOT_UID) {
+	    printf("Is ROOT, calculating best extents count\n");
 		/* Calculate the size per extent */
 		blk_count = get_file_blocks(logical_list_head);
 
