@@ -771,12 +771,14 @@ static int insert_extent(struct fiemap_extent_list **ext_list_head,
 }
 
 static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
-    struct fiemap_extent_list *ex_a =
-            (struct fiemap_extent_list *) a;
-    struct fiemap_extent_list *ex_b =
-            (struct fiemap_extent_list *) b;
+    const struct fiemap_extent_list *ex_a =
+            (const struct fiemap_extent_list *) a;
+    const struct fiemap_extent_list *ex_b =
+            (const struct fiemap_extent_list *) b;
 
-    return (int) (ex_a->data.physical - ex_b->data.physical);
+    int result = (int) (ex_a->data.physical - ex_b->data.physical);
+    printf("Comp %x %x res %x", ex_a->data.physical, ex_b->data.physical, res);
+    return result;
 }
 
 static EXT2_QSORT_TYPE comp_logical(const void *a, const void *b) {
