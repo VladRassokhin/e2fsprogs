@@ -674,7 +674,7 @@ static int check_overlaps_logical(struct fiemap_extent_list *list_head) {
     do {
         if (ext_list_tmp->next != list_head
             && ext_list_tmp->data.logical + ext_list_tmp->data.len > ext_list_tmp->next->data.logical) {
-            printf("Physical overlap at position %d: %8x %8x %8x\n", pos, ext_list_tmp->data.logical,
+            printf("Logical overlap at position %d: %8x %8x %8x\n", pos, ext_list_tmp->data.logical,
                    ext_list_tmp->data.len, ext_list_tmp->next->data.logical);
             /* Overlap */
             goto out;
@@ -825,10 +825,6 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
         array[i] = ext_list_tmp;
         ext_list_tmp = ext_list_tmp->next;
     }
-    printf("Before sort:\n");
-    for (int i = 0; i < size; ++i) {
-        printf("%6d: %8x %8x %8x %8x\n", i, array[i], array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
-    }
 
     /* Sort an array */
     qsort(array, size, sizeof(struct fiemap_extent_list *), comparator);
@@ -837,11 +833,6 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
     for (int i = 0; i < size; ++i) {
         array[i]->prev = array[(size + i - 1) % size];
         array[i]->next = array[(i + 1) % size];
-    }
-
-    printf("After sort:\n");
-    for (int i = 0; i < size; ++i) {
-        printf("%6d: %8x %8x %8x %8x\n", i, array[i], array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
     }
 
     *ext_list_head = array[0];
