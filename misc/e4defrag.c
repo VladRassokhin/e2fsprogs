@@ -776,18 +776,16 @@ static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
     const struct fiemap_extent_list **ex_b =
             (const struct fiemap_extent_list **) b;
 
-    int result = (int) ((*ex_a)->data.physical - (*ex_b)->data.physical);
-    printf("Comp %8x %8x  vals: %8x %8x res %x\n", (*ex_a), (*ex_a), (*ex_a)->data.physical, (*ex_b)->data.physical, result);
-    return result;
+    return (int) ((*ex_a)->data.physical - (*ex_b)->data.physical);
 }
 
 static EXT2_QSORT_TYPE comp_logical(const void *a, const void *b) {
-    const struct fiemap_extent_list *ex_a =
-            (const struct fiemap_extent_list *) a;
-    const struct fiemap_extent_list *ex_b =
-            (const struct fiemap_extent_list *) b;
+    const struct fiemap_extent_list **ex_a =
+            (const struct fiemap_extent_list **) a;
+    const struct fiemap_extent_list **ex_b =
+            (const struct fiemap_extent_list **) b;
 
-    return (int) (ex_a->data.logical - ex_b->data.logical);
+    return (int) ((*ex_a)->data.logical - (*ex_b)->data.logical);
 }
 
 static int get_logical_count(struct fiemap_extent_list *logical_list_head);
