@@ -771,10 +771,10 @@ static int insert_extent(struct fiemap_extent_list **ext_list_head,
 }
 
 static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
-    const struct fiemap_extent_list *ex_a =
-            (const struct fiemap_extent_list *) a;
-    const struct fiemap_extent_list *ex_b =
-            (const struct fiemap_extent_list *) b;
+    struct fiemap_extent_list *ex_a =
+            (struct fiemap_extent_list *) a;
+    struct fiemap_extent_list *ex_b =
+            (struct fiemap_extent_list *) b;
 
     return (int) (ex_a->data.physical - ex_b->data.physical);
 }
@@ -820,6 +820,10 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
         array[i] = ext_list_tmp;
         ext_list_tmp = ext_list_tmp->next;
     }
+    printf("Before sort:\n");
+    for (int i = 0; i < size; ++i) {
+        printf("%6d: %8x %8x %8x\n", i, array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
+    }
 
     /* Sort an array */
     qsort(array, size, sizeof(struct fiemap_extent_list *), comparator);
@@ -830,6 +834,7 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
         array[i]->next = array[(i + 1) % size];
     }
 
+    printf("After sort:\n");
     for (int i = 0; i < size; ++i) {
         printf("%6d: %8x %8x %8x\n", i, array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
     }
