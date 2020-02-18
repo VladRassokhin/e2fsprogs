@@ -757,7 +757,7 @@ static int insert_extent(struct fiemap_extent_list **ext_list_head,
     }
 
     /* Insert "ext" after "ext_list_head" */
-    insert(*ext_list_head, ext);
+    insert((*ext_list_head), ext);
     return 0;
     out:
     errno = EINVAL;
