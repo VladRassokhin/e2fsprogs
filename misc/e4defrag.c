@@ -975,9 +975,8 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 	/* Alloc space for fiemap */
 	ext_buf_size = batch_size * sizeof(struct fiemap_extent);
 	fie_buf_size = sizeof(struct fiemap) + ext_buf_size;
-	printf("batch_size is %d", batch_size);
-	printf("sizeof(struct fiemap_extent) is %d bytes", sizeof(struct fiemap_extent));
-	printf("fie_buf_size is %d bytes", fie_buf_size);
+	printf("Using batch size %d for ioctl calls, struct size is %d bytes\n", batch_size, fie_buf_size);
+	//printf("sizeof(struct fiemap_extent) is %d bytes\n", sizeof(struct fiemap_extent)); // 56
 
 	fiemap_buf = malloc(fie_buf_size);
 	if (fiemap_buf == NULL)
