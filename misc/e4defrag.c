@@ -1220,7 +1220,7 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 		return 0;
 	}
 
-    printf("Fetching extents...");
+    printf("Fetching extents...\n");
 	/* Get file's physical extents  */
 	ret = get_file_extents(fd, &physical_list_head);
 	if (ret < 0) {
@@ -1230,13 +1230,13 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 		}
 		goto out;
 	}
-    printf(" Done.\n");
+    printf("Fetched all extents.\n");
 
 	/* Get the count of file's continuous physical region */
 	physical_ext_count = get_physical_count(physical_list_head);
 
 	/* Change list from physical to logical */
-    printf("Converting to logical...");
+    printf("Converting to logical...\n");
 	ret = change_physical_to_logical(&physical_list_head,
 							&logical_list_head);
 	if (ret < 0) {
@@ -1246,7 +1246,7 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 		}
 		goto out;
 	}
-    printf(" Done.\n");
+    printf("Converted to logical-sorted list.\n");
 
 	/* Count file fragments before defrag */
 	now_ext_count = get_logical_count(logical_list_head);
