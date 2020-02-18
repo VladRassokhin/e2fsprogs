@@ -812,6 +812,7 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
         goto out;
 
     size = get_logical_count(*ext_list_head);
+    printf("List size is %d\n", size);
 
     /* Empty or single element list */
     if (size <= 1)
@@ -974,6 +975,7 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 	/* Alloc space for fiemap */
 	ext_buf_size = batch_size * sizeof(struct fiemap_extent);
 	fie_buf_size = sizeof(struct fiemap) + ext_buf_size;
+	printf("batch_size is %d", batch_size);
 	printf("sizeof(struct fiemap_extent) is %d bytes", sizeof(struct fiemap_extent));
 	printf("fie_buf_size is %d bytes", fie_buf_size);
 
@@ -1019,6 +1021,7 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 		 * If fm_extents array has been filled and
 		 * there are extents left, continue to cycle.
 		 */
+		printf("Added %d blocks\n", fiemap_buf->fm_mapped_extents);
 	} while (fiemap_buf->fm_mapped_extents
 					== batch_size &&
 		!(ext_buf[batch_size-1].fe_flags
@@ -1197,6 +1200,7 @@ static int get_best_count(ext4_fsblk_t block_count)
 	} else
 		ret = ((block_count - 1) / blocks_per_group) + 1;
 
+	printf("g_b_c, blocks_per_group=%d, block_count=%d, feature_incompat=%8x, log_groups_per_flex=%d, ret=%d\n", blocks_per_group, block_count, feature_incompat, log_groups_per_flex, ret);
 	return ret;
 }
 
