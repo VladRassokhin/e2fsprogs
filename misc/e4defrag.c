@@ -776,14 +776,7 @@ static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
     const struct fiemap_extent_list *ex_b =
             (const struct fiemap_extent_list *) b;
 
-    if (ex_a->data.physical < ex_b->data.physical)
-        return -1;
-    else if (ex_a->data.physical > ex_b->data.physical)
-        return 1;
-    else {
-        errno = EINVAL;
-        return 0;
-    }
+    return (int) (ex_a->data.physical - ex_b->data.physical);
 }
 
 static EXT2_QSORT_TYPE comp_logical(const void *a, const void *b) {
@@ -792,14 +785,7 @@ static EXT2_QSORT_TYPE comp_logical(const void *a, const void *b) {
     const struct fiemap_extent_list *ex_b =
             (const struct fiemap_extent_list *) b;
 
-    if (ex_a->data.logical < ex_b->data.logical)
-        return -1;
-    else if (ex_a->data.logical > ex_b->data.logical)
-        return 1;
-    else {
-        errno = EINVAL;
-        return 0;
-    }
+    return (int) (ex_a->data.logical - ex_b->data.logical);
 }
 
 static int get_logical_count(struct fiemap_extent_list *logical_list_head);
@@ -842,6 +828,10 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
     for (int i = 0; i < size; ++i) {
         array[i]->prev = array[(size + i - 1) % size];
         array[i]->next = array[(i + 1) % size];
+    }
+
+    for (int i = 0; i < size; ++i) {
+        printf("%6d: %8x %8x %8x\n", i, array[i]->data.physical, array[i]->data.logical, array[i]->data.len)
     }
 
     *ext_list_head = array[0];
