@@ -631,6 +631,54 @@ out:
 	return -1;
 }
 
+static int check_overlaps_physical(struct fiemap_extent_list *list_head) {
+    if (list_head == NULL)
+        return 0;
+    struct fiemap_extent_list *ext_list_tmp  = list_head;
+
+    /* Single element list */
+    if (ext_list_tmp->next == ext_list_tmp) {
+        return 0;
+    }
+
+    do {
+        if (ext_list_tmp->data.physical + ext_list_tmp->data.len > ext_list_tmp->next->data.physical) {
+            /* Overlap */
+            goto out;
+        }
+        ext_list_tmp = ext_list_tmp->next;
+    } while (ext_list_tmp != list_head);
+
+    return 0;
+    out:
+    errno = EINVAL;
+    return -1;
+}
+
+static int check_overlaps_logical(struct fiemap_extent_list *list_head) {
+    if (list_head == NULL)
+        return 0;
+    struct fiemap_extent_list *ext_list_tmp  = list_head;
+
+    /* Single element list */
+    if (ext_list_tmp->next == ext_list_tmp) {
+        return 0;
+    }
+
+    do {
+        if (ext_list_tmp->data.logical + ext_list_tmp->data.len > ext_list_tmp->next->data.logical) {
+            /* Overlap */
+            goto out;
+        }
+        ext_list_tmp = ext_list_tmp->next;
+    } while (ext_list_tmp != list_head);
+
+    return 0;
+    out:
+    errno = EINVAL;
+    return -1;
+}
+
 /*
  * insert_extent_by_physical() -	Sequentially insert extent by physical.
  *
@@ -725,6 +773,22 @@ static EXT2_QSORT_TYPE comp_physical(const void *a, const void *b) {
     if (ex_a->data.physical < ex_b->data.physical)
         return -1;
     else if (ex_a->data.physical > ex_b->data.physical)
+        return 1;
+    else {
+        errno = EINVAL;
+        return 0;
+    }
+}
+
+static EXT2_QSORT_TYPE comp_logical(const void *a, const void *b) {
+    const struct fiemap_extent_list *ex_a =
+            (const struct fiemap_extent_list *) a;
+    const struct fiemap_extent_list *ex_b =
+            (const struct fiemap_extent_list *) b;
+
+    if (ex_a->data.logical < ex_b->data.logical)
+        return -1;
+    else if (ex_a->data.logical > ex_b->data.logical)
         return 1;
     else {
         errno = EINVAL;
@@ -961,7 +1025,16 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 					& FIEMAP_EXTENT_LAST));
 
 	FREE(fiemap_buf);
-    sort_extents(ext_list_head, comp_physical);
+    ret = sort_extents(ext_list_head, comp_physical);
+    if (ret < 0) {
+        printf("Failed to sort\n");
+        return ret;
+    }
+    ret = check_overlaps_physical(*ext_list_head);
+    if (ret < 0) {
+        printf("Physical overlap detected\n");
+        return ret;
+    }
 	return 0;
 out:
 	FREE(fiemap_buf);
@@ -1024,33 +1097,20 @@ static int change_physical_to_logical(
 			struct fiemap_extent_list **logical_list_head)
 {
 	int ret;
-	struct fiemap_extent_list *ext_list_tmp = *physical_list_head;
-	struct fiemap_extent_list *ext_list_next = ext_list_tmp->next;
 
-	while (1) {
-		if (ext_list_tmp == ext_list_next) {
-			ret = insert_extent_by_logical(
-				logical_list_head, ext_list_tmp);
-			if (ret < 0)
-				return -1;
+    ret = sort_extents(physical_list_head, comp_logical);
+    if (ret < 0) {
+        printf("Failed to sort\n");
+        return ret;
+    }
+    ret = check_overlaps_logical(*physical_list_head);
+    if (ret < 0) {
+        printf("Logical overlap detected\n");
+        return ret;
+    }
 
-			*physical_list_head = NULL;
-			break;
-		}
-
-		ext_list_tmp->prev->next = ext_list_tmp->next;
-		ext_list_tmp->next->prev = ext_list_tmp->prev;
-		*physical_list_head = ext_list_next;
-
-		ret = insert_extent_by_logical(
-			logical_list_head, ext_list_tmp);
-		if (ret < 0) {
-			FREE(ext_list_tmp);
-			return -1;
-		}
-		ext_list_tmp = ext_list_next;
-		ext_list_next = ext_list_next->next;
-	}
+    *logical_list_head=*physical_list_head;
+    *physical_list_head=NULL;
 
 	return 0;
 }
