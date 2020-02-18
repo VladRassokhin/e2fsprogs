@@ -1306,6 +1306,7 @@ static int file_statistic(const char *file, const struct stat64 *buf,
 
 	/* Get the count of file's continuous physical region */
 	physical_ext_count = get_physical_count(physical_list_head);
+	printf("Physical extents count is %d\n", physical_ext_count);
 
 	/* Change list from physical to logical */
     printf("Converting to logical...\n");
