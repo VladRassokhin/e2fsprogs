@@ -641,12 +641,16 @@ static int check_overlaps_physical(struct fiemap_extent_list *list_head) {
         return 0;
     }
 
+    int pos = 0;
+
     do {
         if (ext_list_tmp->data.physical + ext_list_tmp->data.len > ext_list_tmp->next->data.physical) {
+            printf("Physical overlap at position %d: %8x %8x %8x\n", pos, ext_list_tmp->data.physical, ext_list_tmp->data.len, ext_list_tmp->next->data.physical);
             /* Overlap */
             goto out;
         }
         ext_list_tmp = ext_list_tmp->next;
+        ++pos;
     } while (ext_list_tmp != list_head);
 
     return 0;
@@ -664,13 +668,15 @@ static int check_overlaps_logical(struct fiemap_extent_list *list_head) {
     if (ext_list_tmp->next == ext_list_tmp) {
         return 0;
     }
-
+    int pos=0;
     do {
         if (ext_list_tmp->data.logical + ext_list_tmp->data.len > ext_list_tmp->next->data.logical) {
+            printf("Logical overlap at position %d: %8x %8x %8x\n", pos, ext_list_tmp->data.logical, ext_list_tmp->data.len, ext_list_tmp->next->data.logical);
             /* Overlap */
             goto out;
         }
         ext_list_tmp = ext_list_tmp->next;
+        ++pos;
     } while (ext_list_tmp != list_head);
 
     return 0;
