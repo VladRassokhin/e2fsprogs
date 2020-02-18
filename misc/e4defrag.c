@@ -767,7 +767,8 @@ static int insert_extent(struct fiemap_extent_list **ext_list_head,
     }
 
     /* Insert "ext" after last element */
-    insert(((*ext_list_head)->prev), ext);
+    struct fiemap_extent_list *last = (*ext_list_head)->prev;
+    insert(last, ext);
     return 0;
     out:
     errno = EINVAL;
