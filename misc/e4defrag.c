@@ -106,12 +106,6 @@
 /* Definition of flex_bg */
 #define EXT4_FEATURE_INCOMPAT_FLEX_BG		0x0200
 
-/* The following macro is used for ioctl FS_IOC_FIEMAP
- * EXTENT_MAX_COUNT:	the maximum number of extents for exchanging between
- *			kernel-space and user-space per ioctl
- */
-#define EXTENT_MAX_COUNT	512
-
 /* The following macros are error message */
 #define MSG_USAGE		\
 "Usage	: e4defrag [-v] file...| directory...| device...\n\
@@ -873,6 +867,16 @@ static int join_extents(struct fiemap_extent_list *ext_list_head,
 	return 0;
 }
 
+static int adjust_ioctl_fetch_size(int extents_size) {
+    if (extents_size > 32768) {
+        return 10240;
+    } else if (extents_size > 4096) {
+        return 1024;
+    } else {
+        return 512;
+    }
+}
+
 /*
  * get_file_extents() -	Get file's extent list.
  *
@@ -895,8 +899,16 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 	 * so there is no overflow, but in future it may be changed.
 	 */
 
+    int expected_extents_count = file_frag_count(fd);
+    if (expected_extents_count < 0) {
+        PRINT_ERR_MSG_WITH_ERRNO(NGMSG_FILE_INFO);
+        goto out;
+    }
+
+    int batch_size = adjust_ioctl_fetch_size(expected_extents_count);
+
 	/* Alloc space for fiemap */
-	ext_buf_size = EXTENT_MAX_COUNT * sizeof(struct fiemap_extent);
+	ext_buf_size = batch_size * sizeof(struct fiemap_extent);
 	fie_buf_size = sizeof(struct fiemap) + ext_buf_size;
 	printf("sizeof(struct fiemap_extent) is %d bytes", sizeof(struct fiemap_extent));
 	printf("fie_buf_size is %d bytes", fie_buf_size);
@@ -909,7 +921,7 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 	memset(fiemap_buf, 0, fie_buf_size);
 	fiemap_buf->fm_length = FIEMAP_MAX_OFFSET;
 	fiemap_buf->fm_flags |= FIEMAP_FLAG_SYNC;
-	fiemap_buf->fm_extent_count = EXTENT_MAX_COUNT;
+	fiemap_buf->fm_extent_count = batch_size;
 
 	do {
 		fiemap_buf->fm_start = pos;
@@ -937,15 +949,15 @@ static int get_file_extents(int fd, struct fiemap_extent_list **ext_list_head)
 			}
 		}
 		/* Record file's logical offset this time */
-		pos = ext_buf[EXTENT_MAX_COUNT-1].fe_logical +
-			ext_buf[EXTENT_MAX_COUNT-1].fe_length;
+		pos = ext_buf[batch_size-1].fe_logical +
+			ext_buf[batch_size-1].fe_length;
 		/*
 		 * If fm_extents array has been filled and
 		 * there are extents left, continue to cycle.
 		 */
 	} while (fiemap_buf->fm_mapped_extents
-					== EXTENT_MAX_COUNT &&
-		!(ext_buf[EXTENT_MAX_COUNT-1].fe_flags
+					== batch_size &&
+		!(ext_buf[batch_size-1].fe_flags
 					& FIEMAP_EXTENT_LAST));
 
 	FREE(fiemap_buf);
