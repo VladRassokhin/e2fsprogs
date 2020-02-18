@@ -824,7 +824,7 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
     }
     printf("Before sort:\n");
     for (int i = 0; i < size; ++i) {
-        printf("%6d: %8x %8x %8x\n", i, array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
+        printf("%6d: %8x %8x %8x %8x\n", i, array[i], array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
     }
 
     /* Sort an array */
@@ -838,7 +838,7 @@ static int sort_extents(struct fiemap_extent_list **ext_list_head, int (* compar
 
     printf("After sort:\n");
     for (int i = 0; i < size; ++i) {
-        printf("%6d: %8x %8x %8x\n", i, array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
+        printf("%6d: %8x %8x %8x %8x\n", i, array[i], array[i]->data.physical, array[i]->data.logical, array[i]->data.len);
     }
 
     *ext_list_head = array[0];
